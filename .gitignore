@@ -1,0 +1,11 @@
+build/
+dist/
+.DS_Store
+*.elf
+*.nso
+*.npdm
+*.nsp
+*.map
+
+# Локальные заметки агентов; общие инструкции — в AGENTS.md
+CLAUDE.md
