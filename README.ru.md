@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="https://gowithme.club"><img src=".github/assets/banner.png" alt="Трекер игрового времени для Switch от gowithme.club: сессии и часы со Switch с Atmosphere" width="100%"></a>
+  <a href="https://gowithme.club"><img src=".github/assets/banner.png" alt="Трекер игрового времени для Switch: Switch с Atmosphere отправляет сессии и часы в один профиль gowithme.club" width="100%"></a>
 </p>
 
 <p align="center">
@@ -10,78 +10,67 @@
   <a href="https://github.com/gowithme-club/switch-playtime-tracker/releases/latest"><img alt="Последний релиз" src="https://img.shields.io/github/v/release/gowithme-club/switch-playtime-tracker?style=flat-square&labelColor=131C16&color=C7F547&label=release"></a>
   <img alt="Switch с Atmosphere" src="https://img.shields.io/badge/Switch-Atmosphere-C7F547?style=flat-square&labelColor=131C16">
   <a href="LICENSE"><img alt="Лицензия MIT" src="https://img.shields.io/badge/license-MIT-C7F547?style=flat-square&labelColor=131C16"></a>
-  <a href="https://gowithme.club"><img alt="gowithme.club" src="https://img.shields.io/badge/profile-gowithme.club-C7F547?style=flat-square&labelColor=131C16"></a>
 </p>
 
 # Трекер игрового времени для Switch
 
-Sysmodule Atmosphere для прошитой Nintendo Switch: записывает, во что и сколько
-вы играете, и отправляет это в ваш профиль на
-[gowithme.club](https://gowithme.club) — кросс-платформенном трекере игровой
-статистики. Стартует вместе с системой и работает в фоне: без Nintendo Switch
-Online, без трафика к Nintendo и без компьютера рядом во время игры.
+Sysmodule Atmosphere с открытым кодом: считает игровое время и сессии на
+прошитой Nintendo Switch и отправляет их в ваш профиль на
+[gowithme.club](https://gowithme.club). Nintendo Switch Online не нужен.
 
-Исходный код открыт, чтобы было видно, что именно работает на вашей консоли и
-что с неё уходит.
+**Нужно:** Nintendo Switch с Atmosphere, доступ к её SD-карте (картридер или FTP) и бесплатный аккаунт gowithme.club.
 
-## Что вы получите
+## Возможности
 
-- **Время в каждой игре**: каждая сессия с началом, концом и длительностью — из
-  журнала активности самой консоли.
-- **Все профили консоли**: каждый пользователь подключается отдельно, поэтому
-  на общей Switch статистика у каждого своя.
-- **«Сейчас играет»**: друзья видят, во что вы играете, а при закрытии игры
-  всплывёт уведомление, сколько вы играли.
-- **Без сети тоже**: дни без интернета догоняются из журнала, когда консоль
-  снова выйдет в сеть.
-- **Один профиль на все консоли**: Switch, PS5, PS3, Steam, Xbox и PSN в одном
-  месте на gowithme.club.
-
-## Как это устроено
-
-```text
-Switch ── sysmodule читает системный журнал активности (pdm)
-            │
-            └── HTTP ──► gowithme.club ──► ваш профиль, друзья, отчёты в Telegram
-```
-
-Модуль только сообщает сырые события. Названия игр, обложки, итоги и устранение
-дублей — на сервере gowithme.club.
+- Каждая сессия с началом, концом и длительностью — из журнала активности консоли.
+- Каждый профиль на консоли учитывается отдельно.
+- Статус «сейчас играет» в профиле; при закрытии игры всплывёт, сколько вы играли.
+- Дни без сети догоняются из журнала, когда консоль выйдет в интернет.
+- Стартует вместе с системой и работает в фоне.
 
 ## Установка
 
-Нужна Switch с Atmosphere, её SD-карта и способ прочитать карту на компьютере
-(или FTP), а также бесплатный аккаунт на [gowithme.club](https://gowithme.club).
-Пошаговая инструкция с картинками — на gowithme.club в **Настройки → Nintendo
-Switch (CFW)**, коротко:
+Пошаговая инструкция с картинками — на gowithme.club в **Настройки → Nintendo Switch (CFW)**. Коротко:
 
-1. На gowithme.club выпустите токен и скачайте архив. Токен в нём уже записан в
-   `config/gowithme.club/config.json`.
-2. Полностью выключите консоль (удерживать питание → Power Options → Turn Off;
-   спящий режим не подходит) и вставьте SD-карту в компьютер.
-3. Скопируйте папки `atmosphere` и `config` из архива в корень карты. На вопрос
-   про совпадающие папки отвечайте **«Объединить»**, а не «Заменить».
-4. Верните карту и загрузитесь в Atmosphere. Модуль запустится сам.
-5. Запустите любую игру и оставьте её примерно на минуту. На gowithme.club она
-   появится как «сейчас играет».
+1. На gowithme.club выпустите токен и скачайте архив (токен в нём уже записан).
+2. Полностью выключите консоль и скопируйте папки `atmosphere` и `config` в
+   корень SD-карты. Выбирайте **«Объединить»**, а не «Заменить».
+3. Загрузитесь в Atmosphere и запустите любую игру примерно на минуту.
 
-Архив лежит и на [странице релизов](https://github.com/gowithme-club/switch-playtime-tracker/releases/latest);
-без токена модуль ничего не делает. Проверить или выключить его можно в оверлее
-**Sysmodules** (Ultrahand / Tesla). Всё, что делает модуль, пишется в
-`config/gowithme.club/log.txt` на карте.
+Архив есть и на [странице релизов](https://github.com/gowithme-club/switch-playtime-tracker/releases/latest).
+Лог модуля — `config/gowithme.club/log.txt` на SD-карте.
 
-Чтобы удалить модуль, сотрите с карты папку `atmosphere/contents/4200000000505341`.
+## Вопросы
 
-## Что отправляется
+**Как считать игровое время на прошитой Switch?**
+Установите этот sysmodule с токеном из gowithme.club. Сессии и часы появятся
+в профиле.
 
+**Нужен ли Nintendo Switch Online?**
+Нет. Трекер читает журнал активности консоли и не обращается к сервисам Nintendo.
+
+**Посчитает игры, сыгранные до установки?**
+Да. При первом запуске он выгружает историю запусков из журнала консоли.
+
+**Switch общая на несколько человек. Это проблема?**
+Нет. Каждый профиль консоли подключается отдельно и получает свою статистику.
+
+**Работает без интернета?**
+Да. Дни без сети отправляются из журнала, когда консоль снова выйдет в интернет.
+
+**Как выключить?**
+В оверлее **Sysmodules** (Ultrahand или Tesla) выключите `gowithme.club`.
+
+**Что он отправляет?**
 Title ID и название игры, время начала и конца сессии, игровое время и ник
-профиля на консоли, по которому сессии привязываются к вам.
+профиля консоли.
 
-## Где проверено
+**Как удалить?**
+Удалите с SD-карты папки `atmosphere/contents/4200000000505341` и
+`config/gowithme.club`.
 
-Живая Switch с Atmosphere. Проверенные версии — на
-[странице релизов](https://github.com/gowithme-club/switch-playtime-tracker/releases).
-Отчёты с других сборок очень пригодятся.
+**У меня обычная Switch без прошивки.**
+Обычная Switch подключается на gowithme.club по Friend Code, без homebrew.
 
 ## Сборка из исходников
 
@@ -92,8 +81,7 @@ dkp-pacman -S switch-libjson-c switch-curl
 make            # dist/atmosphere/contents/4200000000505341/
 ```
 
-Ключи конфига, почему бюджет памяти определяет устройство кода и что измерено
-на консоли — [docs/DEVELOPMENT.ru.md](docs/DEVELOPMENT.ru.md).
+Ключи конфига, бюджет памяти и замеры на консоли: [docs/DEVELOPMENT.ru.md](docs/DEVELOPMENT.ru.md).
 
 ## Другие консоли
 
@@ -101,18 +89,22 @@ make            # dist/atmosphere/contents/4200000000505341/
 | --- | --- | --- |
 | PS5 с джейлбрейком | [ps5-playtime-tracker](https://github.com/gowithme-club/ps5-playtime-tracker) | пейлоад |
 | PS3 с HEN или CFW | [ps3-playtime-tracker](https://github.com/gowithme-club/ps3-playtime-tracker) | VSH-плагин |
-| Switch с Atmosphere | **switch-playtime-tracker** (этот) | sysmodule |
+| Switch с Atmosphere | **switch-playtime-tracker** | sysmodule |
 
-Обычные консоли, Steam, Xbox и Discord подключаются на
-[gowithme.club](https://gowithme.club) без установки чего-либо. Обычная Switch —
-по Friend Code.
+Обычные PS4 и PS5, Steam, Xbox, Nintendo Switch и Discord подключаются на
+[gowithme.club](https://gowithme.club) без установки чего-либо.
 
-## Авторы кода и лицензия
+## Поддержка
+
+[Поддержка в Telegram](https://t.me/gowithme_club_support) ·
+[issues на GitHub](https://github.com/gowithme-club/switch-playtime-tracker/issues) ·
+пулреквесты приветствуются.
+
+## Лицензия
 
 [MIT](LICENSE). Каркас sysmodule взят из
 [llsc12/SwitchRPC](https://github.com/llsc12/SwitchRPC) (MIT); чтение игровых
-событий следует формату и алгоритму
-[NX Activity Log](https://github.com/tallbl0nde/NX-Activity-Log).
+событий следует [NX Activity Log](https://github.com/tallbl0nde/NX-Activity-Log).
 
-Это неофициальный homebrew, не связанный с Nintendo и не одобренный ею. Nintendo
-Switch — товарный знак Nintendo. Запуск homebrew на консоли — на ваш риск.
+Неофициальный homebrew, не связан с Nintendo и не одобрен ею. Nintendo Switch —
+товарный знак Nintendo.
