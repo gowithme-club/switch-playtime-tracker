@@ -26,3 +26,4 @@ gowithme.club sys plugin для Nintendo Switch (CFW) — версия @VERSION@
   Канал в Telegram:      https://t.me/gowithme_club
   Чат в Telegram:        https://t.me/gowithme_club_chat
   Discord:               https://discord.gg/QczAdmy9M6
+  Исходный код:          https://github.com/gowithme-club/switch-playtime-tracker
