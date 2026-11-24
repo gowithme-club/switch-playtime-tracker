@@ -14,9 +14,9 @@ The server contract is `docs/ingest-api-v1.md` in the gwm-stats repo, with a cli
 
 This module is one client of a server that owns all the domain logic — dedup, sessions, trophies, live status, dashboard. A client only forwards events over the ingest API; anything that changes server behaviour or the contract itself belongs in gwm-stats, not here.
 
-- gwm-stats — server, ingest endpoints, web dashboard, public read API.
+- [server](https://github.com/gowithme-club/server) (formerly gwm-stats) — ingest endpoints, web dashboard, public read API.
 - [ps3-playtime-tracker](https://github.com/gowithme-club/ps3-playtime-tracker) — the PS3 VSH plugin (CFW / PS3HEN), a second client of the same ingest API. Same three flows on a different console, so it is the place to compare how heartbeat, closed sessions and trophies are supposed to behave.
-- gwm-stats-ios — SwiftUI app that reads the server's public API; it never writes to ingest.
+- [ios-app](https://github.com/gowithme-club/ios-app) (formerly gwm-stats-ios) — SwiftUI app that reads the server's public API; it never writes to ingest.
 
 ## Build
 
@@ -143,3 +143,9 @@ Derived from [llsc12/SwitchRPC](https://github.com/llsc12/SwitchRPC) (MIT): npdm
 ## Workflow
 
 Commit straight to `main` — no feature branches in this repo.
+
+## Brand
+
+The product is **gowithme.club**: lowercase, never shortened to "gowithme"; `GWM` names only the friends' group. The descriptor, the slogan and how to write them live in the server repository, in [`src/public/brand.js`](https://github.com/gowithme-club/server/blob/main/src/public/brand.js) and [DESIGN.md, "Голос"](https://github.com/gowithme-club/server/blob/main/DESIGN.md#голос), with [the list of every text shown outside the site](https://github.com/gowithme-club/server/blob/main/DESIGN.md#тексты-вне-сайта). Reuse that wording rather than writing a variant; when a text listed there changes here, update the list.
+
+The module's on-console name `gwm-stats` predates this and stays until the owner decides otherwise: renaming touches installed copies and their config paths.
