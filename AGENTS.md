@@ -148,4 +148,4 @@ Commit straight to `main` — no feature branches in this repo.
 
 The product is **gowithme.club**: lowercase, never shortened to "gowithme"; `GWM` names only the friends' group. The descriptor, the slogan and how to write them live in the server repository, in [`src/public/brand.js`](https://github.com/gowithme-club/server/blob/main/src/public/brand.js) and [DESIGN.md, "Голос"](https://github.com/gowithme-club/server/blob/main/DESIGN.md#голос), with [the list of every text shown outside the site](https://github.com/gowithme-club/server/blob/main/DESIGN.md#тексты-вне-сайта). Reuse that wording rather than writing a variant; when a text listed there changes here, update the list.
 
-The module's on-console name `gwm-stats` predates this and stays until the owner decides otherwise: renaming touches installed copies and their config paths.
+On the console the module is `gowithme.club` too: Sysmodules shows the name from `gwm-stats-switch/toolbox.json`. The title id and the `gwm-stats-switch` build name stay.

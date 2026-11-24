@@ -1,7 +1,7 @@
 # gwm-stats-switch — sysmodule для прошитой Switch
 
-На самой консоли модуль называется коротко **gwm-stats**; расширенное имя
-репозитория отличает Switch-клиент от сервера и других клиентов.
+На консоли модуль называется **gowithme.club**: это имя из
+`gwm-stats-switch/toolbox.json` показывает Sysmodules.
 
 Sysmodule для прошитой Nintendo Switch (Atmosphere / UltraNX), которая репортит
 игровую активность на сервер gwm-stats по контракту
