@@ -126,7 +126,7 @@ static bool appletEventType(u8 raw, PlayJournalEventType* out) {
 // the tail can be found by bisection instead: about a dozen probes rather than
 // hundreds of sequential reads. Returning 0 is always safe — it is the old
 // behaviour — so every probe that cannot answer falls back to it.
-static s32 findScanStart(s32 total, s64 watermarkEpoch) {
+static s32 findScanStart(s32 total, s64 watermarkEpoch, u64 steadyNow) {
     // Nothing on the server yet: the oldest sessions are the ones owed, and the
     // scan stops on its own after maxSessions of them. Starting at zero is both
     // correct and cheap here.
@@ -147,11 +147,17 @@ static s32 findScanStart(s32 total, s64 watermarkEpoch) {
         // Not every entry carries a user timestamp. Take the first that does:
         // timestamps do not decrease, so an answer read slightly past `middle`
         // can only move the result earlier, which is the safe direction.
-        u64 timestamp = 0;
-        for (s32 i = 0; i < count && timestamp == 0; i++) timestamp = probe[i].timestamp_user;
+        s64 timestamp = 0;
+        for (s32 i = 0; i < count && timestamp == 0; i++) {
+            if (probe[i].timestamp_user == 0) continue;
+            timestamp = journalRealTime(probe[i].timestamp_user, probe[i].timestamp_network,
+                                        probe[i].timestamp_steady, steadyNow);
+        }
         if (timestamp == 0) return 0;
 
-        if ((s64)timestamp + g_timeOffset > target) {
+        // Real time, not the user clock: a clock moved since makes the user
+        // timestamps jump, and a bisection over them lands anywhere.
+        if (timestamp > target) {
             high = middle;
         } else {
             low = middle + 1;
@@ -168,6 +174,8 @@ struct PendingSession {
     s32 launchIndex = -1;
     u64 launchTimestamp = 0;
     u64 lastBoundaryTimestamp = 0;
+    u64 lastBoundaryNetwork = 0;
+    u64 lastBoundarySteady = 0;
     PlayJournalSession value;
 };
 
@@ -191,7 +199,7 @@ static void startSession(PendingSession* session, u64 titleId, s32 entryIndex, c
         {PlayJournalEventType::Launch, raw.timestamp_user, raw.timestamp_steady, std::string()});
 }
 
-static void appendEvent(PendingSession* session, const PlayJournalEvent& event) {
+static void appendEvent(PendingSession* session, const PlayJournalEvent& event, u64 network) {
     if (session->overflow) return;
     if (session->value.events.size() >= MAX_EVENTS_PER_SESSION) {
         session->overflow = true;
@@ -201,21 +209,43 @@ static void appendEvent(PendingSession* session, const PlayJournalEvent& event) 
     session->value.events.push_back(event);
     if (event.type == PlayJournalEventType::OutOfFocus || event.type == PlayJournalEventType::Exit) {
         session->lastBoundaryTimestamp = event.clockTimestamp;
+        session->lastBoundaryNetwork = network;
+        session->lastBoundarySteady = event.steadyTimestamp;
     }
     if (event.type == PlayJournalEventType::AccountLogin && !event.account.empty()) {
         session->hasAccountLogin = true;
     }
 }
 
-static void finishSession(const IngestConfig& cfg, PendingSession* session, s64 watermark,
-                          std::vector<PlayJournalSession>* out) {
+static void finishSession(const IngestConfig& cfg, PendingSession* session, s64 watermark, u64 steadyNow,
+                          std::vector<PlayJournalSession>* out, bool* batchFull) {
     if (!session->active || session->overflow || session->lastBoundaryTimestamp == 0) {
         *session = PendingSession{};
         return;
     }
 
-    const s64 correctedEnd = (s64)session->lastBoundaryTimestamp + g_timeOffset;
+    // Placed by its own real time, not by the user clock and today's offset:
+    // the user clock may have been moved since this entry was written (a reset
+    // clock set right, a game's time travel), and the offset of now put such a
+    // slice decades away, where the server refused it and every later slice
+    // queued behind it (2026-11-26).
+    const s64 correctedEnd = journalRealTime(session->lastBoundaryTimestamp, session->lastBoundaryNetwork,
+                                             session->lastBoundarySteady, steadyNow);
     if (correctedEnd <= watermark) {
+        *session = PendingSession{};
+        return;
+    }
+    session->value.clockOffsetSeconds = correctedEnd - (s64)session->lastBoundaryTimestamp;
+    if (llabs(session->value.clockOffsetSeconds - g_timeOffset) > 60) {
+        writeToLog("[Journal] %016llX was written under another user clock: its offset is %llds, today's %llds.",
+                   (unsigned long long)session->value.titleId, (long long)session->value.clockOffsetSeconds,
+                   (long long)g_timeOffset);
+    }
+
+    // One offset goes with a batch, so a slice written under another clock
+    // waits for the next one.
+    if (!out->empty() && out->front().clockOffsetSeconds != session->value.clockOffsetSeconds) {
+        *batchFull = true;
         *session = PendingSession{};
         return;
     }
@@ -299,12 +329,14 @@ bool collectPendingPlaySessions(const IngestConfig& cfg, const std::string& wate
     }
 
     const s64 watermarkEpoch = parseServerWatermark(watermark);
+    const u64 steadyNow = getSteadyNowSec();
+    bool batchFull = false;
     PendingSession current;
     PdmPlayEvent events[PDM_READ_WINDOW] = {};
     // QueryPlayEvent uses a zero-based offset into the available event stream.
     // The range's start/end values are not valid offsets on all firmwares.
     writeTrace("      pdm: findScanStart (bisection)");
-    s32 offset = findScanStart(total, watermarkEpoch);
+    s32 offset = findScanStart(total, watermarkEpoch, steadyNow);
 
     // Said once: the journal's size is the number that explains how long a scan
     // takes, and it was guesswork until it appeared here.
@@ -314,13 +346,13 @@ bool collectPendingPlaySessions(const IngestConfig& cfg, const std::string& wate
         writeToLog("[Journal] The play journal holds %d entries; this scan starts at %d.", total, offset);
     }
 
-    while (out->size() < maxSessions && offset < total) {
+    while (out->size() < maxSessions && !batchFull && offset < total) {
         s32 count = 0;
         memset(events, 0, sizeof(events));
         rc = pdmqryQueryPlayEvent(offset, events, PDM_READ_WINDOW, &count);
         if (R_FAILED(rc) || count <= 0) break;
 
-        for (s32 i = 0; i < count && out->size() < maxSessions; i++) {
+        for (s32 i = 0; i < count && out->size() < maxSessions && !batchFull; i++) {
             const s32 entryIndex = offset + i;
             const PdmPlayEvent& raw = events[i];
 
@@ -337,16 +369,20 @@ bool collectPendingPlaySessions(const IngestConfig& cfg, const std::string& wate
                 if (type == PlayJournalEventType::Launch) {
                     // A new launch closes a crash-truncated predecessor at its
                     // last focus loss, exactly as NX Activity Log does.
-                    finishSession(cfg, &current, watermarkEpoch, out);
-                    if (out->size() >= maxSessions) break;
+                    finishSession(cfg, &current, watermarkEpoch, steadyNow, out, &batchFull);
+                    if (out->size() >= maxSessions || batchFull) break;
                     startSession(&current, titleId, entryIndex, raw);
                     continue;
                 }
 
                 if (!current.active || (titleId & ~0xFFFULL) != (current.value.titleId & ~0xFFFULL)) continue;
-                appendEvent(&current, {type, raw.timestamp_user, raw.timestamp_steady, std::string()});
+                appendEvent(&current, {type, raw.timestamp_user, raw.timestamp_steady, std::string()},
+                            raw.timestamp_network);
 
-                if (type == PlayJournalEventType::Exit) finishSession(cfg, &current, watermarkEpoch, out);
+                if (type == PlayJournalEventType::Exit) {
+                    finishSession(cfg, &current, watermarkEpoch, steadyNow, out, &batchFull);
+                    if (batchFull) break;
+                }
             } else if (raw.play_event_type == PdmPlayEventType_Account && current.active &&
                        (raw.event_data.account.type == 0 || raw.event_data.account.type == 1)) {
                 UserInfo user = {};
@@ -356,7 +392,8 @@ bool collectPendingPlaySessions(const IngestConfig& cfg, const std::string& wate
                 const PlayJournalEventType type = raw.event_data.account.type == 0
                                                       ? PlayJournalEventType::AccountLogin
                                                       : PlayJournalEventType::AccountLogout;
-                appendEvent(&current, {type, raw.timestamp_user, raw.timestamp_steady, account});
+                appendEvent(&current, {type, raw.timestamp_user, raw.timestamp_steady, account},
+                            raw.timestamp_network);
             }
         }
 

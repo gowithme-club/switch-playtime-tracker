@@ -577,6 +577,58 @@ void updateTimeOffset(int64_t newOffset) {
                (long long)delta);
 }
 
+// The other two clocks, anchored to the server the way g_timeOffset anchors
+// the user clock, with the same one-second hysteresis for the same reason.
+//
+// Measured on a console (2026-11-26): the user clock moved to 2052 and back
+// left the network clock and the steady clock alone, the steady clock counts
+// through sleep (an 11-day sleep moved it exactly as far as the network
+// clock), and the journal's `timestamp_steady` sits a constant 12 s from what
+// timeGetStandardSteadyClockTimePoint reports — a different zero, not drift.
+static bool g_anchorsKnown = false;
+static int64_t g_networkOffset = 0;      // server minus network clock
+static int64_t g_steadyOffset = 0;       // server minus steady clock
+static int64_t g_networkMinusSteady = 0; // network minus steady clock, now
+
+// How far the gap between an entry's network and steady timestamps may sit
+// from today's before the network clock counts as adjusted since: the two
+// scales' different zeros (12 s measured) and a quantized second either side.
+static const int64_t CLOCK_CONSISTENCY_SEC = 120;
+
+u64 getSteadyNowSec() {
+    TimeSteadyClockTimePoint point = {};
+    if (R_FAILED(timeGetStandardSteadyClockTimePoint(&point)) || point.time_point <= 0) return 0;
+    return (u64)point.time_point;
+}
+
+static void adopt(int64_t* current, int64_t measured) {
+    if (!g_anchorsKnown || llabs(measured - *current) > CLOCK_OFFSET_HYSTERESIS_SEC) *current = measured;
+}
+
+void updateClockAnchors(int64_t serverUtc) {
+    u64 network = 0;
+    const u64 steady = getSteadyNowSec();
+    if (R_FAILED(timeGetCurrentTime(TimeType_NetworkSystemClock, &network)) || network == 0 || steady == 0) return;
+
+    adopt(&g_networkOffset, serverUtc - (int64_t)network);
+    adopt(&g_steadyOffset, serverUtc - (int64_t)steady);
+    adopt(&g_networkMinusSteady, (int64_t)network - (int64_t)steady);
+    g_anchorsKnown = true;
+}
+
+s64 journalRealTime(u64 user, u64 network, u64 steady, u64 steadyNow) {
+    if (g_anchorsKnown && steady != 0) {
+        if (network != 0 &&
+            llabs((int64_t)network - (int64_t)steady - g_networkMinusSteady) <= CLOCK_CONSISTENCY_SEC) {
+            return (int64_t)network + g_networkOffset;
+        }
+        // A steady timestamp past today's belongs to a steady clock that has
+        // since been reset (a flat clock battery); it measures nothing now.
+        if (steadyNow != 0 && steady <= steadyNow + CLOCK_CONSISTENCY_SEC) return (int64_t)steady + g_steadyOffset;
+    }
+    return user != 0 ? (int64_t)user + g_timeOffset : 0;
+}
+
 u64 parseIso8601(const char* text) {
     int year = 0, month = 0, day = 0, hour = 0, minute = 0, second = 0;
     if (text == NULL || sscanf(text, "%4d-%2d-%2dT%2d:%2d:%2d", &year, &month, &day, &hour, &minute, &second) != 6) {

@@ -140,7 +140,10 @@ static std::string buildPlaySessionsBody(const std::vector<PlayJournalSession>& 
     std::string body;
     body.reserve(estimate);
     char number[32];
-    snprintf(number, sizeof(number), "%lld", (long long)g_timeOffset);
+    // Every slice of a batch shares one offset (finishSession), and it is the
+    // slices' own rather than the console's current one.
+    snprintf(number, sizeof(number), "%lld",
+             (long long)(sessions.empty() ? g_timeOffset : sessions.front().clockOffsetSeconds));
     body.append("{\"clockOffsetSeconds\":").append(number).append(",\"playSessions\":[");
 
     for (size_t i = 0; i < sessions.size(); i++) {

@@ -119,6 +119,23 @@ u64 getCorrectedNowSec();
 /// following it duplicated sessions on the server.
 void updateTimeOffset(int64_t newOffset);
 
+/// The console's other two clocks against the same server timestamp. The user
+/// clock is the one a person sets (and a game's time travel moves); the network
+/// clock and the steady clock are not, so the journal's own copies of them say
+/// when an entry really happened after the user clock was moved. Measured from
+/// the same `Date` header as `g_timeOffset`.
+void updateClockAnchors(int64_t serverUtc);
+
+/// Real time of a journal entry from its three timestamps: the network clock
+/// when it has not been adjusted since (checked against the steady clock), else
+/// the steady clock, else the user clock with today's offset. `steadyNow` is
+/// the steady clock now, in the journal's own scale. Returns 0 when nothing is
+/// known yet.
+s64 journalRealTime(u64 user, u64 network, u64 steady, u64 steadyNow);
+
+/// The steady clock now, in seconds, or 0 when it cannot be read.
+u64 getSteadyNowSec();
+
 /// Formats a corrected epoch second as ISO 8601 UTC ("2026-08-07T18:30:05Z").
 /// `out` must hold at least 21 bytes.
 void formatIso8601(u64 epochSec, char* out, size_t outSize);

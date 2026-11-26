@@ -80,6 +80,7 @@ static size_t headerCallback(char* data, size_t size, size_t count, void* contex
         if (serverUtc != -1) {
             const u64 rawLocal = getRawNowSec();
             if (rawLocal > 0) updateTimeOffset((int64_t)serverUtc - (int64_t)rawLocal);
+            updateClockAnchors((int64_t)serverUtc);
         }
     }
 

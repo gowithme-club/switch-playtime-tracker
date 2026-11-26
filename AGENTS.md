@@ -130,6 +130,8 @@ Sleep and wake come from `psc`, not from clocks (the module is frozen while the 
 
 The console RTC drifts on CFW and the server rejects future timestamps, so every timestamp sent is corrected by `g_timeOffset`, learned from the `Date` header of each response. `getRawNowSec()` measures intervals; `getCorrectedNowSec()` is what goes on the wire.
 
+A journal entry keeps the user clock it was written under, and a person moves that clock — a reset clock set right later, a game's time travel. Today's `g_timeOffset` then puts the entry anywhere: one stamped 2052 and sent after the clock was fixed was refused as being in the future, and every later slice queued behind it (2026-11-26). So a slice is placed by its own real time (`journalRealTime`): the entry's network-clock timestamp while the network clock has not been adjusted since, checked against the steady clock, else its steady timestamp, else the user clock with today's offset. Measured on a console: moving the user clock to 2052 and back left the network and steady clocks alone, and the steady clock counts through sleep. A batch carries one `clockOffsetSeconds`, so slices with different offsets go in different batches, and the server needed no change.
+
 ## Releases
 
 A release is what a person starting from nothing actually installs, so its notes carry the whole installation — hardware required, which folder goes where, what the folder-merge prompt means, the config file, how to check it worked — not a changelog fragment. The «Установка с нуля» section of `docs/DEVELOPMENT.ru.md` and the release notes say the same thing in the same order; when one changes, so does the other.

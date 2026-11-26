@@ -28,6 +28,10 @@ struct PlayJournalSession {
     std::string title;
     std::string accountHint;
     std::vector<PlayJournalEvent> events;
+    /// What turns this slice's user-clock timestamps into real time. Its own,
+    /// not the console's current offset: an entry written before the user
+    /// clock was moved needs the offset of its own time (journalRealTime).
+    s64 clockOffsetSeconds = 0;
 };
 
 /// Reads complete launch-to-close slices from Horizon's PDM journal. Only
