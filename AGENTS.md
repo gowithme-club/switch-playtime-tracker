@@ -6,7 +6,7 @@ Canonical instructions for any agent working in this repository. `CLAUDE.md` onl
 
 One Atmosphere sysmodule for a CFW Nintendo Switch — `gwm-stats-switch/`, Title ID `4200000000505341`, versioned by `VERSION` at the repo root — which reports play activity to a gwm-stats server. `make` lays it out as an SD-card image under `dist/atmosphere/`, dragged onto the card root as-is.
 
-A second module, `gwm-reloader` (`4200000000505342`), used to ship alongside it to restart this one over LAN TCP. It was deleted because its listener wedged in a `poll` that never returned. It was also blamed for hanging this module's HTTP calls, and that was wrong — see the socket section below for what actually caused it. It is in git history.
+There is no remote-restart module. `gwm-reloader` (`4200000000505342`), which restarted this one over LAN TCP, was deleted because its listener wedged in a `poll` that never returned; it is in git history and described in `docs/DEVELOPMENT.ru.md`.
 
 The server contract is `docs/ingest-api-v1.md` in the gwm-stats repo, with a client-author version at `docs/ingest-api-v1-client.md`. `README.md` (English) and `README.ru.md` are the short public pages for people installing the module — keep them in step with each other and with the site's setup guide; `docs/DEVELOPMENT.ru.md` (Russian) holds the full install, config and reasoning; code comments and commit messages are English.
 
@@ -42,7 +42,7 @@ There is no CI and no container recipe in the repo — that was deliberate, do n
 
 ## Testing
 
-There is no test suite and no host-runnable code — everything depends on Horizon services. Verification is a real console: install, then read `sdmc:/config/gowithme.club/log.txt`. Compiling in the container is the only check available from a workstation.
+There is no test suite and no host-runnable code — everything depends on Horizon services. Verification is a real console: install, then read `sdmc:/config/gowithme.club/log.txt`. Compiling is the only check available from a workstation.
 
 The console's SD card is reachable over FTP at `ftp://192.168.1.37:5000` — that is how new builds go over and how logs and configs are read back without touching the card:
 
@@ -72,7 +72,7 @@ Treat any change that grows the heap or held service sessions as a change that c
 
 ## The socket buffers are not a cache — they are the driver, and starving them is silent
 
-For most of this project the module never sent a single byte to the server. Every transport connected in about six milliseconds and then stopped: the hand-written one, and curl after it. curl's `CURLOPT_TIMEOUT` of twelve seconds never fired, which is the tell — curl checks its timeouts *between* waits, so a timeout that never fires means a call that never returned. An on-console probe found it: one `send()` of 300 bytes into an established connection did not return in 63 seconds.
+With too little socket transfer memory, every transport — the hand-written one, and curl after it — connected in about six milliseconds and then never sent a byte. curl's `CURLOPT_TIMEOUT` of twelve seconds never fired, which is the tell — curl checks its timeouts *between* waits, so a timeout that never fires means a call that never returned. Measured by an on-console probe: one `send()` of 300 bytes into an established connection did not return in 63 seconds.
 
 The cause was `SocketInitConfig`. libnx turns those numbers into a transfer memory block, exactly:
 
@@ -84,7 +84,7 @@ and its own comment on that function is the whole story: below the size the conf
 
 The configurations that hung were 24 KB and 28 KB of transfer memory. The current values are SwitchRPC's — `0x8000 × 4` = 128 KB — and they work. **Do not trim them to save heap.** If they must be trimmed, move `sb_efficiency` one step at a time and verify a POST on the console after each step.
 
-Three things that were written here as fact, and are not:
+Three more facts about this socket layer:
 
 - `num_bsd_sessions` does **not** enter the formula. Sessions are nearly free; `sb_efficiency` and the buffer sizes are what cost.
 - `poll` on this console honours its timeout. Measured: 1011 ms for a 1000 ms wait.
