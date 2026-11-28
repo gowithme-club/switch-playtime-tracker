@@ -23,7 +23,6 @@ dist: check-version $(MODULE)
 	@touch dist/atmosphere/contents/$(TITLEID)/flags/boot2.flag
 	@cp $(MODULE)/$(MODULE).nsp dist/atmosphere/contents/$(TITLEID)/exefs.nsp
 	@cp $(MODULE)/toolbox.json  dist/atmosphere/contents/$(TITLEID)/toolbox.json
-	@sed 's/@VERSION@/$(VERSION)/g' README.dist.txt > dist/README.txt
 	@echo "Built dist/atmosphere/contents/$(TITLEID)/ (version $(VERSION))"
 
 clean:
